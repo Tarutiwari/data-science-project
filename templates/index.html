@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Piano.AI - Music Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0a1a;
+            color: #e0e0ff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+        }
+
+        /* background glow blobs */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -200px;
+            left: -200px;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(120, 60, 220, 0.25), transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -200px;
+            right: -200px;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(50, 100, 255, 0.2), transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 720px;
+            padding: 40px 24px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .logo {
+            font-size: 13px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: #9b7fff;
+            margin-bottom: 12px;
+        }
+
+        h1 {
+            font-size: 42px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #c0a0ff, #7eb8ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.1;
+        }
+
+        h1 span {
+            background: linear-gradient(135deg, #7eb8ff, #c0a0ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 15px;
+            color: #8888aa;
+            margin-top: 10px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 32px;
+            backdrop-filter: blur(12px);
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            color: #9b7fff;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(155, 127, 255, 0.3);
+            border-radius: 12px;
+            color: #e0e0ff;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            resize: vertical;
+            min-height: 100px;
+            transition: border-color 0.3s;
+            outline: none;
+        }
+
+        .sliders {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .slider-group label {
+            color: #8888aa;
+            text-transform: none;
+            letter-spacing: 0;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        .slider-group label span {
+            color: #c0a0ff;
+            font-weight: 600;
+        }
+
+        input[type='range'] {
+            width: 100%;
+            accent-color: #7b3fff;
+            cursor: pointer;
+        }
+
+        textarea::placeholder {
+            color: #555577;
+        }
+
+        textarea:focus {
+            border-color: rgba(155, 127, 255, 0.7);
+            box-shadow: 0 0 0 3px rgba(155, 127, 255, 0.1);
+        }
+
+        button[type="submit"] {
+            width: 100%;
+            padding: 16px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, #7b3fff, #3b6fff);
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 24px rgba(100, 60, 255, 0.4);
+            letter-spacing: 0.5px;
+        }
+
+        button[type="submit"]:hover {
+            opacity: 0.92;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(100, 60, 255, 0.55);
+        }
+
+        button[type="submit"]:active {
+            transform: translateY(0);
+        }
+
+        .output-section {
+            display: none;
+        }
+
+        .output-section.visible {
+            display: block;
+        }
+
+        .output-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #9b7fff;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #7bff9b;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .output-text {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 18px;
+            font-size: 14px;
+            color: #c0c0e0;
+            line-height: 1.7;
+            word-break: break-all;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+        }
+
+        .piano-keys {
+            display: flex;
+            justify-content: center;
+            gap: 3px;
+            margin: 24px 0 8px;
+        }
+
+        .key {
+            width: 28px;
+            height: 80px;
+            background: linear-gradient(180deg, #e8e8ff, #d0d0f0);
+            border-radius: 0 0 6px 6px;
+            border: 1px solid rgba(255,255,255,0.15);
+            position: relative;
+            transition: transform 0.1s;
+        }
+
+        .key:nth-child(2n) {
+            height: 50px;
+            width: 18px;
+            background: linear-gradient(180deg, #2a1a5e, #1a0a3e);
+            margin: 0 -9px;
+            z-index: 1;
+        }
+
+        .player-controls {
+            display: flex;
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        #playBtn {
+            flex: 1;
+            padding: 14px;
+            background: linear-gradient(135deg, rgba(123, 255, 155, 0.15), rgba(59, 111, 255, 0.15));
+            border: 1px solid rgba(123, 255, 155, 0.45);
+            border-radius: 12px;
+            color: #7bff9b;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.2s;
+            letter-spacing: 0.5px;
+        }
+
+        #playBtn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, rgba(123, 255, 155, 0.25), rgba(59, 111, 255, 0.25));
+        }
+
+        #playBtn:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 14px 22px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(155, 127, 255, 0.4);
+            border-radius: 12px;
+            color: #c0a0ff;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: opacity 0.2s, transform 0.2s;
+            letter-spacing: 0.5px;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            background: rgba(155, 127, 255, 0.12);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 32px;
+            color: #44445a;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <p class="logo">🎹 AI Music</p>
+            <h1>Piano<span>.AI</span></h1>
+            <p class="subtitle">Generate piano melodies using an LSTM model</p>
+
+            <!-- decorative piano keys -->
+            <div class="piano-keys">
+                <div class="key"></div>
+                <div class="key"></div>
+                <div class="key"></div>
+                <div class="key"></div>
+                <div class="key"></div>
+                <div class="key"></div>
+                <div class="key"></div>
+                <div class="key"></div>
+                <div class="key"></div>
+                <div class="key"></div>
+                <div class="key"></div>
+                <div class="key"></div>
+                <div class="key"></div>
+            </div>
+        </header>
+
+        <div class="card">
+            <form id="generateForm" method="POST" action="/">
+                <label for="music_input">Seed Input (optional)</label>
+                <textarea
+                    id="music_input"
+                    name="music_input"
+                    placeholder="Leave empty to generate randomly, or describe what you want..."
+                >{{ user_input }}</textarea>
+
+                <div class="sliders">
+                    <div class="slider-group">
+                        <label for="note_count">Notes to generate: <span id="noteVal">200</span></label>
+                        <input type="range" id="note_count" name="note_count" min="50" max="500" value="200"
+                               oninput="document.getElementById('noteVal').textContent = this.value">
+                    </div>
+                    <div class="slider-group">
+                        <label for="temperature">Temperature (creativity): <span id="tempVal">0.8</span></label>
+                        <input type="range" id="temperature" name="temperature" min="0.1" max="2.0" step="0.1" value="0.8"
+                               oninput="document.getElementById('tempVal').textContent = this.value">
+                    </div>
+                </div>
+
+                <button type="submit" id="generateBtn">Generate Melody</button>
+            </form>
+        </div>
+
+        {% if error %}
+        <div class="card" style="border-color: rgba(255,80,80,0.3); background: rgba(255,50,50,0.05);">
+            <div class="output-label" style="color: #ff7777;">⚠ Error</div>
+            <div class="output-text" style="color: #ff9999;">{{ error }}</div>
+        </div>
+        {% endif %}
+
+        {% if generated_output %}
+        <div class="card output-section visible" id="outputSection">
+            <div class="output-label">
+                <span class="dot"></span>
+                Generated Melody
+            </div>
+            <div class="output-text">{{ generated_output }}</div>
+            <div class="player-controls">
+                <button type="button" id="playBtn">▶ Play Melody</button>
+                <a href="/download-midi" class="download-btn" download="Melody_Generated.mid">⬇ Download MIDI</a>
+            </div>
+        </div>
+        {% endif %}
+
+        <footer>
+            built with LSTM + music21 &nbsp;·&nbsp; piano.ai
+        </footer>
+    </div>
+
+    <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
+    <script src="https://unpkg.com/@tonejs/midi@2.0.28/build/Midi.js"></script>
+    <script>
+        // show loading state on submit
+        const form = document.getElementById('generateForm')
+        const btn = document.getElementById('generateBtn')
+
+        form.addEventListener('submit', () => {
+            btn.textContent = 'Generating...'
+            btn.style.opacity = '0.7'
+            btn.disabled = true
+        })
+
+        // ---- MIDI playback in browser ----
+        const playBtn = document.getElementById('playBtn')
+        let synth = null
+        let midiParsed = null
+
+        if (playBtn) {
+            playBtn.addEventListener('click', async () => {
+                if (!window.Tone || !window.Midi) {
+                    alert('Audio library load nahi hua — internet connection check karo')
+                    return
+                }
+                try {
+                    await Tone.start()  // unlock browser audio (user gesture)
+
+                    if (!midiParsed) {
+                        playBtn.textContent = '⏳ Loading...'
+                        playBtn.disabled = true
+                        const res = await fetch('/download-midi?t=' + Date.now(), { cache: 'no-store' })
+                        if (!res.ok) throw new Error('MIDI file not found')
+                        const buf = await res.arrayBuffer()
+                        midiParsed = new Midi(buf)
+                        synth = new Tone.PolySynth(Tone.Synth, {
+                            oscillator: { type: 'triangle' }
+                        }).toDestination()
+                        synth.volume.value = -8
+                    }
+
+                    const now = Tone.now() + 0.1
+                    midiParsed.tracks.forEach(track => {
+                        track.notes.forEach(n => {
+                            synth.triggerAttackRelease(n.name, n.duration, now + n.time)
+                        })
+                    })
+
+                    playBtn.textContent = '🔊 Playing...'
+                    playBtn.disabled = true
+                    setTimeout(() => {
+                        playBtn.textContent = '▶ Play Again'
+                        playBtn.disabled = false
+                    }, midiParsed.duration * 1000 + 500)
+                } catch (err) {
+                    playBtn.textContent = '▶ Play Melody'
+                    playBtn.disabled = false
+                    alert('Playback failed: ' + err.message)
+                }
+            })
+        }
+    </script>
+</body>
+</html>
